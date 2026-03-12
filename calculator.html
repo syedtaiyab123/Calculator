@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Anime Power Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet" />
+<style>
+  /* ── CSS Variables ── */
+  :root {
+    --bg-deep:      #04020f;
+    --bg-mid:       #0b0620;
+    --purple-dark:  #1a0535;
+    --purple:       #7b2fff;
+    --purple-glow:  #a855f7;
+    --pink:         #ff2d78;
+    --pink-glow:    #ff6ea7;
+    --cyan:         #00e5ff;
+    --cyan-glow:    #7fefff;
+    --gold:         #ffd700;
+    --white-soft:   #e8deff;
+    --btn-bg:       rgba(20, 5, 50, 0.85);
+    --btn-border:   rgba(123, 47, 255, 0.45);
+    --display-bg:   rgba(0, 229, 255, 0.05);
+  }
+
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-deep);
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Animated star field ── */
+  .starfield {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    animation: twinkle var(--dur, 3s) ease-in-out infinite;
+    opacity: 0;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0; transform: scale(0.6); }
+    50%       { opacity: var(--op, 0.7); transform: scale(1); }
+  }
+
+  /* ── Floating particles (sakura / energy orbs) ── */
+  .particles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    animation: floatUp var(--ft, 8s) ease-in-out infinite;
+    opacity: 0;
+  }
+  @keyframes floatUp {
+    0%   { transform: translateY(110vh) translateX(0) scale(0.4); opacity: 0; }
+    10%  { opacity: 0.8; }
+    90%  { opacity: 0.5; }
+    100% { transform: translateY(-10vh) translateX(var(--dx, 30px)) scale(1.2); opacity: 0; }
+  }
+
+  /* ── Heading ── */
+  .heading-wrap {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .heading-eyebrow {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.35em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    animation: fadeSlide 1s ease both;
+  }
+  .heading-main {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.3rem, 4vw, 2rem);
+    font-weight: 900;
+    background: linear-gradient(90deg, var(--purple-glow), var(--pink), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    letter-spacing: 0.06em;
+    animation: fadeSlide 1s 0.15s ease both;
+    position: relative;
+  }
+  .heading-main::after {
+    content: 'ANIME POWER CALCULATOR';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--purple-glow), var(--pink), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: blur(12px);
+    opacity: 0.55;
+    z-index: -1;
+  }
+  .heading-sub {
+    font-size: 0.7rem;
+    color: var(--purple-glow);
+    letter-spacing: 0.18em;
+    margin-top: 3px;
+    opacity: 0.8;
+    animation: fadeSlide 1s 0.3s ease both;
+  }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(-14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Calculator shell ── */
+  .calc-shell {
+    position: relative;
+    z-index: 10;
+    width: min(380px, 95vw);
+    background: linear-gradient(145deg, #110330 0%, #08011e 60%, #0d0228 100%);
+    border-radius: 24px;
+    padding: 22px 22px 26px;
+    box-shadow:
+      0 0 0 1.5px rgba(123,47,255,0.5),
+      0 0 30px rgba(123,47,255,0.25),
+      0 0 80px rgba(255,45,120,0.12),
+      0 40px 80px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+    animation: shellAppear 0.8s 0.4s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @keyframes shellAppear {
+    from { opacity: 0; transform: scale(0.88) translateY(30px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Animated border glow */
+  .calc-shell::before {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    border-radius: 25.5px;
+    background: conic-gradient(
+      from var(--angle, 0deg),
+      var(--purple) 0%, var(--pink) 25%, var(--cyan) 50%, var(--purple) 75%, var(--purple) 100%
+    );
+    z-index: -1;
+    animation: rotateBorder 4s linear infinite;
+    opacity: 0.7;
+  }
+  .calc-shell::after {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    border-radius: 25.5px;
+    background: conic-gradient(
+      from var(--angle, 0deg),
+      var(--purple) 0%, var(--pink) 25%, var(--cyan) 50%, var(--purple) 75%, var(--purple) 100%
+    );
+    z-index: -2;
+    filter: blur(14px);
+    animation: rotateBorder 4s linear infinite;
+    opacity: 0.4;
+  }
+  @property --angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+  }
+  @keyframes rotateBorder {
+    to { --angle: 360deg; }
+  }
+
+  /* ── Corner accents ── */
+  .corner {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-color: var(--cyan);
+    border-style: solid;
+    opacity: 0.7;
+  }
+  .corner.tl { top: 10px; left: 10px; border-width: 2px 0 0 2px; border-radius: 3px 0 0 0; }
+  .corner.tr { top: 10px; right: 10px; border-width: 2px 2px 0 0; border-radius: 0 3px 0 0; }
+  .corner.bl { bottom: 10px; left: 10px; border-width: 0 0 2px 2px; border-radius: 0 0 0 3px; }
+  .corner.br { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; border-radius: 0 0 3px 0; }
+
+  /* ── Display ── */
+  .display-wrap {
+    background: var(--display-bg);
+    border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 14px;
+    padding: 14px 18px 10px;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      inset 0 0 20px rgba(0,229,255,0.06),
+      0 0 20px rgba(0,229,255,0.08);
+  }
+  .display-wrap::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0.6;
+    animation: scanline 2.5s ease-in-out infinite;
+  }
+  @keyframes scanline {
+    0%, 100% { opacity: 0.3; }
+    50%       { opacity: 0.9; }
+  }
+  .display-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.25em;
+    color: var(--cyan);
+    opacity: 0.55;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .display-expression {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.78rem;
+    color: var(--purple-glow);
+    opacity: 0.7;
+    min-height: 1.2em;
+    text-align: right;
+    letter-spacing: 0.05em;
+    word-break: break-all;
+    transition: opacity 0.2s;
+  }
+  .display-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1.7rem, 8vw, 2.6rem);
+    font-weight: 700;
+    color: var(--white-soft);
+    text-align: right;
+    letter-spacing: 0.02em;
+    word-break: break-all;
+    text-shadow:
+      0 0 10px rgba(200,180,255,0.6),
+      0 0 30px rgba(123,47,255,0.4);
+    transition: color 0.2s, text-shadow 0.2s;
+    min-height: 1.2em;
+    line-height: 1.15;
+  }
+  .display-value.result-flash {
+    color: var(--cyan);
+    text-shadow:
+      0 0 10px var(--cyan-glow),
+      0 0 40px var(--cyan);
+  }
+
+  /* ── HUD scan line overlay ── */
+  .hud-lines {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,229,255,0.015) 3px,
+      rgba(0,229,255,0.015) 4px
+    );
+    pointer-events: none;
+    border-radius: 14px;
+  }
+
+  /* ── Button Grid ── */
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  /* ── Base button ── */
+  .btn {
+    position: relative;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    padding: 0;
+    height: 62px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s ease;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.92) !important; }
+
+  /* Inner span for layered look */
+  .btn span {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--btn-border);
+    background: var(--btn-bg);
+    backdrop-filter: blur(6px);
+    color: var(--white-soft);
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+
+  /* Glow pseudo-layer */
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: var(--glow-color, var(--purple));
+    opacity: 0;
+    filter: blur(8px);
+    transition: opacity 0.2s;
+    z-index: 0;
+  }
+  .btn:hover { transform: scale(1.07); }
+  .btn:hover::before { opacity: 0.5; }
+  .btn:hover span {
+    border-color: var(--glow-color, var(--purple));
+    color: white;
+  }
+
+  /* ── Digit buttons ── */
+  .btn-digit {
+    --glow-color: var(--purple-glow);
+  }
+  .btn-digit:hover span { background: rgba(123,47,255,0.2); }
+  .btn-digit { box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04); }
+
+  /* ── Operator buttons ── */
+  .btn-op {
+    --glow-color: var(--pink);
+  }
+  .btn-op span {
+    border-color: rgba(255,45,120,0.45);
+    color: var(--pink-glow);
+    font-size: 1.2rem;
+  }
+  .btn-op:hover span { background: rgba(255,45,120,0.2); color: white; }
+  .btn-op { box-shadow: 0 4px 14px rgba(255,45,120,0.15); }
+
+  /* ── Equals button ── */
+  .btn-equals {
+    --glow-color: var(--cyan);
+    grid-column: span 2;
+  }
+  .btn-equals span {
+    background: linear-gradient(135deg, rgba(0,150,200,0.35), rgba(0,229,255,0.15));
+    border-color: rgba(0,229,255,0.55);
+    color: var(--cyan);
+    font-size: 1.4rem;
+    letter-spacing: 0.05em;
+  }
+  .btn-equals:hover span { background: rgba(0,229,255,0.25); color: white; }
+  .btn-equals {
+    box-shadow:
+      0 0 20px rgba(0,229,255,0.2),
+      0 4px 14px rgba(0,0,0,0.4);
+  }
+
+  /* ── Clear / special buttons ── */
+  .btn-clear {
+    --glow-color: var(--gold);
+  }
+  .btn-clear span {
+    border-color: rgba(255,215,0,0.45);
+    color: var(--gold);
+  }
+  .btn-clear:hover span { background: rgba(255,215,0,0.15); color: white; }
+
+  .btn-del {
+    --glow-color: #ff6b35;
+  }
+  .btn-del span {
+    border-color: rgba(255,107,53,0.45);
+    color: #ff9a70;
+  }
+  .btn-del:hover span { background: rgba(255,107,53,0.2); color: white; }
+
+  /* ── Zero (wide) ── */
+  .btn-zero { grid-column: span 2; }
+
+  /* ── Ripple effect ── */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    background: rgba(255,255,255,0.25);
+    animation: rippleAnim 0.5s linear;
+    z-index: 3;
+    pointer-events: none;
+  }
+  @keyframes rippleAnim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* ── Footer tag ── */
+  .footer-tag {
+    position: relative;
+    z-index: 10;
+    margin-top: 14px;
+    font-size: 0.58rem;
+    letter-spacing: 0.25em;
+    color: rgba(123,47,255,0.5);
+    text-transform: uppercase;
+    animation: fadeSlide 1s 1s ease both;
+  }
+
+  /* ── Error flash ── */
+  @keyframes errorShake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-6px); }
+    40%       { transform: translateX(6px); }
+    60%       { transform: translateX(-4px); }
+    80%       { transform: translateX(4px); }
+  }
+  .error-shake { animation: errorShake 0.4s ease; }
+
+  /* ── Responsive ── */
+  @media (max-width: 400px) {
+    .btn { height: 54px; }
+    .btn span { font-size: 0.88rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Starfield -->
+<div class="starfield" id="starfield"></div>
+
+<!-- Particles -->
+<div class="particles" id="particles"></div>
+
+<!-- Heading -->
+<div class="heading-wrap">
+  <div class="heading-eyebrow">✦ Powered by Arcane Energy ✦</div>
+  <div class="heading-main">ANIME POWER CALCULATOR</div>
+  <div class="heading-sub">超計算機 · HYPER COMPUTE UNIT v∞</div>
+</div>
+
+<!-- Calculator -->
+<div class="calc-shell" id="calcShell">
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+
+  <!-- Display -->
+  <div class="display-wrap">
+    <div class="hud-lines"></div>
+    <div class="display-label">// OUTPUT STREAM</div>
+    <div class="display-expression" id="expression">&nbsp;</div>
+    <div class="display-value" id="display">0</div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-grid">
+    <!-- Row 1 -->
+    <button class="btn btn-clear"  onclick="calcAction('clear')">  <span>AC</span></button>
+    <button class="btn btn-del"    onclick="calcAction('del')">    <span>⌫</span></button>
+    <button class="btn btn-op"     onclick="calcAction('%')">      <span>%</span></button>
+    <button class="btn btn-op"     onclick="calcAction('/')">      <span>÷</span></button>
+
+    <!-- Row 2 -->
+    <button class="btn btn-digit"  onclick="calcAction('7')">      <span>7</span></button>
+    <button class="btn btn-digit"  onclick="calcAction('8')">      <span>8</span></button>
+    <button class="btn btn-digit"  onclick="calcAction('9')">      <span>9</span></button>
+    <button class="btn btn-op"     onclick="calcAction('*')">      <span>×</span></button>
+
+    <!-- Row 3 -->
+    <button class="btn btn-digit"  onclick="calcAction('4')">      <span>4</span></button>
+    <button class="btn btn-digit"  onclick="calcAction('5')">      <span>5</span></button>
+    <button class="btn btn-digit"  onclick="calcAction('6')">      <span>6</span></button>
+    <button class="btn btn-op"     onclick="calcAction('-')">      <span>−</span></button>
+
+    <!-- Row 4 -->
+    <button class="btn btn-digit"  onclick="calcAction('1')">      <span>1</span></button>
+    <button class="btn btn-digit"  onclick="calcAction('2')">      <span>2</span></button>
+    <button class="btn btn-digit"  onclick="calcAction('3')">      <span>3</span></button>
+    <button class="btn btn-op"     onclick="calcAction('+')">      <span>+</span></button>
+
+    <!-- Row 5 -->
+    <button class="btn btn-digit btn-zero" onclick="calcAction('0')"><span>0</span></button>
+    <button class="btn btn-digit"  onclick="calcAction('.')">      <span>.</span></button>
+    <button class="btn btn-equals" onclick="calcAction('=')">      <span>=</span></button>
+  </div>
+</div>
+
+<div class="footer-tag">// System Ready · All Systems Nominal //</div>
+
+<script>
+/* ── Generate starfield ── */
+(function buildStars() {
+  const sf = document.getElementById('starfield');
+  for (let i = 0; i < 120; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 2.5 + 0.5;
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      top:${Math.random()*100}vh; left:${Math.random()*100}vw;
+      --dur:${(Math.random()*4+2).toFixed(1)}s;
+      --op:${(Math.random()*0.6+0.2).toFixed(2)};
+      animation-delay:${(Math.random()*5).toFixed(1)}s;
+    `;
+    sf.appendChild(s);
+  }
+})();
+
+/* ── Generate floating particles ── */
+(function buildParticles() {
+  const pc = document.getElementById('particles');
+  const colors = ['#a855f7','#ff2d78','#00e5ff','#ffd700','#ff6ea7','#7fefff'];
+  for (let i = 0; i < 28; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 6 + 3;
+    const color = colors[Math.floor(Math.random()*colors.length)];
+    const dx = (Math.random()-0.5)*160;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}vw;
+      background:${color};
+      box-shadow: 0 0 ${size*2}px ${color};
+      --ft:${(Math.random()*10+6).toFixed(1)}s;
+      --dx:${dx.toFixed(0)}px;
+      animation-delay:${(Math.random()*10).toFixed(1)}s;
+    `;
+    pc.appendChild(p);
+  }
+})();
+
+/* ── Ripple on every button ── */
+document.querySelectorAll('.btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    const r = document.createElement('span');
+    r.className = 'ripple';
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px;`;
+    btn.appendChild(r);
+    r.addEventListener('animationend', () => r.remove());
+  });
+});
+
+/* ── Calculator Logic ── */
+let expression = '';   // full expression string
+let displayVal  = '0'; // what shows on main line
+let lastResult  = false;
+let justCalc    = false;
+
+const displayEl    = document.getElementById('display');
+const expressionEl = document.getElementById('expression');
+const shell        = document.getElementById('calcShell');
+
+const operators = ['+','-','*','/','%'];
+
+function updateDisplay(val, expr) {
+  displayEl.textContent = val;
+  expressionEl.textContent = expr || '\u00a0';
+}
+
+function flashResult() {
+  displayEl.classList.remove('result-flash');
+  void displayEl.offsetWidth;
+  displayEl.classList.add('result-flash');
+  setTimeout(() => displayEl.classList.remove('result-flash'), 700);
+}
+
+function shakeShell() {
+  shell.classList.remove('error-shake');
+  void shell.offsetWidth;
+  shell.classList.add('error-shake');
+  setTimeout(() => shell.classList.remove('error-shake'), 450);
+}
+
+function isOperator(ch) {
+  return operators.includes(ch);
+}
+
+function lastChar() {
+  return expression.slice(-1);
+}
+
+function calcAction(action) {
+  if (action === 'clear') {
+    expression = '';
+    displayVal  = '0';
+    justCalc    = false;
+    updateDisplay('0', '');
+    return;
+  }
+
+  if (action === 'del') {
+    if (justCalc) { expression = ''; displayVal = '0'; justCalc = false; updateDisplay('0',''); return; }
+    expression = expression.slice(0, -1);
+    if (!expression) { displayVal = '0'; updateDisplay('0',''); return; }
+    // rebuild display from expression
+    const parts = expression.split(/([+\-*/%])/);
+    displayVal = parts[parts.length-1] || '0';
+    if (!displayVal) displayVal = '0';
+    updateDisplay(displayVal, expression.replace(/\*/g,'×').replace(/\//g,'÷'));
+    return;
+  }
+
+  if (action === '=') {
+    if (!expression) return;
+    // tidy: remove trailing operator
+    let expr = expression.replace(/[+\-*/%]$/, '');
+    if (!expr) return;
+    try {
+      // safe eval via Function
+      const result = Function('"use strict"; return (' + expr + ')')();
+      if (!isFinite(result)) throw new Error('Invalid');
+      const formatted = parseFloat(result.toFixed(10)).toString();
+      expressionEl.textContent = expression.replace(/\*/g,'×').replace(/\//g,'÷') + ' =';
+      expression = formatted;
+      displayVal  = formatted;
+      displayEl.textContent = formatted;
+      flashResult();
+      justCalc = true;
+    } catch(e) {
+      expressionEl.textContent = expression.replace(/\*/g,'×').replace(/\//g,'÷');
+      displayEl.textContent = 'ERROR';
+      shakeShell();
+      expression = '';
+      displayVal  = '0';
+      justCalc    = false;
+    }
+    return;
+  }
+
+  // Operator key
+  if (isOperator(action)) {
+    justCalc = false;
+    if (!expression) {
+      // allow leading minus
+      if (action === '-') { expression = '-'; displayVal = '-'; updateDisplay('-',''); return; }
+      return;
+    }
+    // replace trailing operator
+    if (isOperator(lastChar())) {
+      expression = expression.slice(0,-1) + action;
+    } else {
+      expression += action;
+    }
+    displayVal = action;
+    updateDisplay(displayVal, expression.slice(0,-1).replace(/\*/g,'×').replace(/\//g,'÷'));
+    return;
+  }
+
+  // Digit / decimal
+  if (action === '.') {
+    // don't allow two decimals in the same number
+    const parts = expression.split(/[+\-*/%]/);
+    const current = parts[parts.length-1];
+    if (current.includes('.')) return;
+  }
+
+  if (justCalc && !isOperator(action)) {
+    // fresh number after result
+    expression = action;
+    displayVal  = action;
+    justCalc    = false;
+    updateDisplay(displayVal, '');
+    return;
+  }
+
+  expression += action;
+  // rebuild display number
+  const parts = expression.split(/(?<=[^eE])[+\-]|[*\/%]/);
+  displayVal = parts[parts.length-1];
+  if (!displayVal && isOperator(lastChar())) displayVal = expression[expression.length-1];
+  updateDisplay(displayVal || '0', expression.replace(/\*/g,'×').replace(/\//g,'÷'));
+}
+
+/* Keyboard support */
+document.addEventListener('keydown', e => {
+  if ('0123456789'.includes(e.key))  { calcAction(e.key); return; }
+  if (['+','-','*','/','%'].includes(e.key)) { calcAction(e.key); return; }
+  if (e.key === '.')  calcAction('.');
+  if (e.key === 'Enter' || e.key === '=') calcAction('=');
+  if (e.key === 'Backspace')  calcAction('del');
+  if (e.key === 'Escape')     calcAction('clear');
+});
+</script>
+</body>
+</html>
